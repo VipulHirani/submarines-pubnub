@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Room</title>
+  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.30.0.min.js"></script>
+</head>
+<body>
+  <div>
+    <h1>Jack Sparrow's Control Room</h1>
+
+    <div id="submarineList">
+      <!-- Submarines will be listed here -->
+    </div>
+  </div>
+
+  <script>
+    const pubnub = new PubNub({
+      publishKey: 'pub-c-254802f0-c897-47ec-9ed9-f00a172c1b29',
+      subscribeKey: 'sub-c-af9779c3-ca22-4498-84ac-e4df9cc716c9',
+    });
+
+    pubnub.subscribe({
+      channels: ['submarine_channel'],
+      withPresence: true,
+ status: function (status) {
+    console.log('PubNub Status:', status);
+  },
+    });
+
+    pubnub.addListener({
+      presence: function (event) {
+console.log('Presence Event:', event);
+   if (event.action === 'join') {
+      handleSubmarineRegistration(event.uuid);
+    } else if (event.action === 'leave') {
+      handleSubmarineLeave(event.uuid);
+        }
+      },
+    });
+
+    function handleSubmarineRegistration(submarineName) {
+	console.log('Handling Registration for:', submarineName);
+      const isNameTaken = document.getElementById(submarineName) !== null;
+	
+
+
+      if (isNameTaken) {
+        pubnub.publish({
+          channel: submarineName,
+          message: { error: 'Name is already taken. Please choose another name.' },
+        });
+      } else {
+        const submarineList = document.getElementById('submarineList');
+        submarineList.innerHTML += `
+          <div id="${submarineName}">
+            <p>${submarineName}</p>
+            <button onclick="sendHideCommand('${submarineName}')">Hide</button>
+          </div>
+        `;
+      }
+    }
+
+    function handleSubmarineLeave(submarineName) {
+      const submarineElement = document.getElementById(submarineName);
+      if (submarineElement) {
+        submarineElement.remove();
+      }
+    }
+
+    function sendHideCommand(submarineName) {
+      pubnub.publish({
+        channel: submarineName,
+        message: { command: 'hide' },
+      });
+
+      const hideButton = document.querySelector(`#${submarineName} button`);
+      if (hideButton) {
+        hideButton.disabled = true;
+      }
+    }
+  </script>
+</body>
+</html>

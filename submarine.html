@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submarines</title>
+  <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.30.0.min.js"></script>
+</head>
+<body>
+  <div>
+    <h1>Submarines</h1>
+
+    <label for="submarineName">Submarine Name:</label>
+    <input type="text" id="submarineName" required pattern="[A-Za-z0-9]+" title="Alphanumeric characters only">
+
+    <button onclick="registerSubmarine()">Register</button>
+
+    <p>Status: <span id="status">Shown</span></p>
+    <button onclick="hideSubmarine()">Hide</button>
+  </div>
+
+  <script>
+    const pubnub = new PubNub({
+      publishKey: 'pub-c-254802f0-c897-47ec-9ed9-f00a172c1b29',
+      subscribeKey: 'sub-c-af9779c3-ca22-4498-84ac-e4df9cc716c9',
+    });
+
+    const submarineNameInput = document.getElementById('submarineName');
+    const statusElement = document.getElementById('status');
+
+    function registerSubmarine() {
+	
+      const submarineName = submarineNameInput.value;
+	console.log('Cliebt', submarineName);
+      pubnub.subscribe({
+        channels: ['submarine_channel'],
+        withPresence: true,
+      });
+
+      pubnub.publish({
+        channel: 'submarine_channel',
+        message: { submarineName },
+      });
+	
+
+      pubnub.addListener({
+        message: function (message) {
+	
+          if (message.channel === submarineName) {
+            handleMessage(message.message);
+          }
+	console.log('Cliebt', message.channel);
+        },
+      });
+    }
+
+    function handleMessage(message) {
+      if (message.error) {
+        alert(message.error);
+      } else if (message.command === 'hide') {
+        statusElement.innerText = 'Hiding';
+        pubnub.unsubscribe({
+          channels: ['submarine_channel'],
+        });
+      }
+    }
+
+    function hideSubmarine() {
+      pubnub.publish({
+        channel: submarineNameInput.value,
+        message: { command: 'hide' },
+      });
+
+      statusElement.innerText = 'Hiding';
+    }
+  </script>
+</body>
+</html>
